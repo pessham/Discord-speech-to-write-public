@@ -1,0 +1,10 @@
+﻿__pycache__/
+*.py[cod]
+
+venv/
+.venv/
+
+temp/
+config.json
+.env
+railway.json
