@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Railway
+        uses: railwayapp/railway-action@v2
+        with:
+          railwayToken: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Build & Push image to Railway
+        uses: railwayapp/railway-docker@v2
+        with:
+          serviceId: ${{ secrets.RAILWAY_SERVICE_ID }}
+          # context defaults to repo root; dockerfile defaults to Dockerfile
