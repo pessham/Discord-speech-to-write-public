@@ -21,11 +21,8 @@ jobs:
       - name: Install Railway CLI
         run: npm install -g @railway/cli
 
-      # Login to Railway
-      - name: Railway login
-        run: railway login --token ${{ secrets.RAILWAY_TOKEN }}
-
-      # Upload & deploy image
+      # Upload & deploy image (token via env var)
       - name: Deploy to Railway
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
         run: railway up --service ${{ secrets.RAILWAY_SERVICE_ID }} --detached
-
