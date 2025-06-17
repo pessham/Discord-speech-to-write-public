@@ -9,22 +9,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # Build Docker image (tagged latest)
+      - name: Build image
+        run: docker build -t discord-speech-bot:latest .
 
-      - name: Login to Railway
-        uses: railwayapp/railway@v1
-        with:
-          railwayToken: ${{ secrets.RAILWAY_TOKEN }}
+      # Install Railway CLI
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
 
-      - name: Build & Push image to Railway
-        uses: railwayapp/railway-docker@v1
-        with:
-          serviceId: ${{ secrets.RAILWAY_SERVICE_ID }}
-          # context defaults to repo root; dockerfile defaults to Dockerfile
+      # Login to Railway
+      - name: Railway login
+        run: railway login --token ${{ secrets.RAILWAY_TOKEN }}
+
+      # Upload & deploy image
+      - name: Deploy to Railway
+        run: railway up --service ${{ secrets.RAILWAY_SERVICE_ID }} --detached
+
