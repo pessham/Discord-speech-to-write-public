@@ -149,6 +149,7 @@ async def _transcribe(ctx: commands.Context):
 
 @bot.event
 async def on_message(message: discord.Message):
+    logging.info("recv: %s", message.content)
     # Ignore own bot messages
     if message.author.bot:
         return
