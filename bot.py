@@ -1,4 +1,4 @@
-import logging
+import logging, sys
 from pathlib import Path
 
 from config import DISCORD_BOT_TOKEN, VAULT_PATH
@@ -103,7 +103,12 @@ async def _summarize(text: str, guild_id: int) -> str:
         return res.choices[0].message.content.strip()
     return await asyncio.to_thread(_do)
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s:%(name)s:%(message)s",
+    stream=sys.stdout,  # Ensure logs go to stdout so Railway doesn't mark them as error
+    force=True,
+)
 
 # Load credentials from .env (handled by python-dotenv in config.py)
 TOKEN = DISCORD_BOT_TOKEN
@@ -156,7 +161,7 @@ async def on_message(message: discord.Message):
 
     content = message.content
 
-        # --- stand.fm URL storage -------------------------------------------------
+    # --- stand.fm URL storage -------------------------------------------------
     m = STANDFM_RE.search(content)
     if m:
         pending_urls[message.channel.id] = m.group(0)
@@ -230,11 +235,41 @@ async def _set_prompt(ctx: commands.Context, *, prompt: str):
     await ctx.send("このサーバーのプロンプトを更新しました。")
 
 
+@bot.command(name="manual")
+async def _manual(ctx: commands.Context):
+    """使い方マニュアル（Notion）へのリンクを表示"""
+    await ctx.send("使い方マニュアルはこちら:\nhttps://mahogany-people-7f2.notion.site/Bot-217b5414fdf880d6be97ceb8e76c3abd?source=copy_link")
+
+
 @bot.command(name="showprompt")
 async def _show_prompt(ctx: commands.Context):
     """現在のサーバープロンプトを表示"""
     prompt = _prompt_map.get(ctx.guild.id, DEFAULT_PROMPT)
     await ctx.send(f"現在のプロンプト:\n```{prompt}```")
+
+
+# ---- Global error logging -------------------------------------------------
+@bot.event
+async def on_error(event_method: str, *args, **kwargs):
+    """Log unhandled exceptions from discord.py events."""
+    logging.exception("Unhandled exception in %s", event_method, exc_info=True)
+
+
+def setup_asyncio_logging():
+    """Ensure the default asyncio exception handler logs via logging module."""
+    loop = asyncio.get_event_loop()
+
+    def _handler(loop, context):
+        exc = context.get("exception")
+        if exc:
+            logging.exception("Asyncio unhandled exception: %s", exc, exc_info=exc)
+        else:
+            logging.error("Asyncio error: %s", context.get("message"))
+
+    loop.set_exception_handler(_handler)
+
+
+setup_asyncio_logging()
 
 
 if __name__ == "__main__":
