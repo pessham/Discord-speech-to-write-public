@@ -233,14 +233,28 @@ async def on_message(message: discord.Message):
                     await message.reply("僕は20分を超える放送の文字おこしは出来ないよ！20分以内の放送をアップしてね！", mention_author=False)
                 return
 
+            logging.info("yt-dlp done, duration=%.1fs", dur)
             # --- Long transcription with heartbeat to avoid idle shutdown ---
+            logging.info("start whisper upload, size=%.1fMB", Path(raw).stat().st_size / 1e6)
             await message.channel.send("🎧 文字起こし中…（数分かかります）")
-            whisper_task = asyncio.create_task(_whisper(raw))
-            while not whisper_task.done():
-                logging.info("still working…")
-                await asyncio.sleep(10)
-            text = await whisper_task
-            summary = await _summarize(text, message.guild.id)
+            try:
+                whisper_task = asyncio.create_task(_whisper(raw))
+                while not whisper_task.done():
+                    logging.info("still working…")
+                    await asyncio.sleep(10)
+                text = await whisper_task
+                logging.info("whisper length=%d chars", len(text))
+            except Exception as e:
+                logging.exception("Whisper failed: %s", e)
+                await message.reply("Whisper API でエラーが発生しました。", mention_author=False)
+                return
+            try:
+                summary = await _summarize(text, message.guild.id)
+                logging.info("summary done, %d chars", len(summary))
+            except Exception as e:
+                logging.exception("summarize failed: %s", e)
+                await message.reply("要約でエラーが発生しました。", mention_author=False)
+                return
         await message.reply(f"🎧 要約はこちら！\n{summary}", mention_author=False)
         pending_urls.pop(message.channel.id, None)
         return
