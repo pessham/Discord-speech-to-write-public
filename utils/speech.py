@@ -5,7 +5,6 @@ from pathlib import Path
 import subprocess, tempfile
 
 import openai
-from openai import BadRequestError
 
 # --- API KEY SETUP ---------------------------------------------------------
 openai.api_key = OPENAI_API_KEY
@@ -32,7 +31,7 @@ def _convert_to_mp3(src: Path) -> Path:
         "-codec:a",
         "libmp3lame",
         "-b:a",
-        "128k",
+        "24k",
         str(dst),
     ]
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -72,10 +71,16 @@ def _transcribe_once(path: Path):
         return openai.audio.transcriptions.create(model=audio_model, file=f).text.strip()
 
 def transcribe(file_path: Path) -> str:
-    path = _ensure_supported(file_path)
-    try:
-        return _transcribe_once(path)
-    except BadRequestError:
-        # force convert to wav and retry
-        wav = _convert_to_wav(file_path)
-        return _transcribe_once(wav)
+     """Robust transcription helper.
+ 
+     1. まず 24kbps の MP3 (16 kHz mono) に変換して Whisper に送る。
+     2. もし MP3 が拒否された場合のみ WAV へフォールバック。
+     この順序により 60 分音声でも 25 MB 未満に収まり、長尺でも安定して文字起こしが可能。
+     """
+     try:
+         mp3 = _convert_to_mp3(file_path)
+         return _transcribe_once(mp3)
+     except Exception:
+         # Fallback to WAV if MP3 fails for何らかの理由 (稀)
+         wav = _convert_to_wav(file_path)
+         return _transcribe_once(wav)

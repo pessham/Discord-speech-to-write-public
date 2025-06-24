@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音声文字おこし屋さん - 貼るだけで音声をサクッと文字おこし</title>
+    <meta name="description" content="stand.fm の URL、mp3 / m4a などの音声ファイルを Whisper + GPT-4o が高精度に文字起こし & 3 行要約。Discord Bot で簡単導入！">
+    
+    <!-- OGP設定 -->
+    <meta property="og:title" content="音声文字おこし屋さん by pessham">
+    <meta property="og:description" content="貼るだけで、音声をサクッと文字おこし。stand.fm の URL、mp3 / m4a などの音声ファイルを Whisper + GPT-4o が高精度に文字起こし & 3 行要約。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://pessham.com/stmoji/">
+    <meta property="og:image" content="https://pessham.com/stmoji/images/ogp-image.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="音声文字おこし屋さん">
+    <meta property="og:locale" content="ja_JP">
+    
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@pess_ham">
+    <meta name="twitter:creator" content="@pess_ham">
+    <meta name="twitter:title" content="音声文字おこし屋さん by pessham">
+    <meta name="twitter:description" content="貼るだけで、音声をサクッと文字おこし。stand.fm の URL、mp3 / m4a などの音声ファイルを Whisper + GPT-4o が高精度に文字起こし & 3 行要約。">
+    <meta name="twitter:image" content="https://pessham.com/stmoji/images/ogp-image.png">
+    
+    <!-- その他のメタタグ -->
+    <meta name="keywords" content="stand.fm,文字起こし,音声認識,Discord,Bot,Whisper,GPT-4o,要約,SNS投稿">
+    <meta name="author" content="pessham">
+    <link rel="canonical" href="https://pessham.com/stmoji/">
+    
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+JP:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-brand">
+                <div class="logo">📝</div>
+                <span class="brand-name">音声文字おこし屋さん</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="#features">できること</a></li>
+                <li><a href="#how-it-works">使い方</a></li>
+                <li><a href="#pricing">料金</a></li>
+                <li><a href="#faq">FAQ</a></li>
+                <li><a href="#invite" class="btn-nav">Botを招待</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="hero-container">
+                <div class="hero-content">
+                    <h1 class="hero-title">
+                        <span class="title-main">音声文字おこし屋さん</span>
+                        <span class="by-credit">by pessham</span>
+                        <div class="character-image">
+                            <img src="images/stmojichara.png" alt="音声文字おこし屋さんキャラクター" class="character-img">
+                        </div>
+                    </h1>
+                    <p class="hero-subtitle">
+                        貼るだけで、音声をサクッと<br>
+                        <span class="highlight-text">"文字おこし"</span>
+                    </p>
+                    <div class="hero-description">
+                        <p>stand.fm の URL、mp3 / m4a などの音声ファイル、Discord 音声入力を<br>
+                        Whisper + GPT-4o が高精度に文字起こし & 3 行要約。<br>
+                        <strong>もう長い音声を聞き返す時間は要りません。</strong></p>
+                    </div>
+                    <div class="hero-buttons">
+                        <a href="https://discord.com/oauth2/authorize?client_id=1384335146215276637&permissions=101440&integration_type=0&scope=bot" target="_blank" class="btn btn-primary">
+                            <span>無料で試す（Bot を招待）</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 2L2 7v10c0 5.55 3.84 10 9 10s9-4.5 9-10V7l-10-5z"/>
+                                <path d="M12 12l-4-2 4-2 4 2-4 2z"/>
+                            </svg>
+                        </a>
+                        <a href="https://mahogany-people-7f2.notion.site/Bot-217b5414fdf880d6be97ceb8e76c3abd?source=copy_link" target="_blank" class="btn btn-secondary">
+                            <span>詳しい手順はマニュアルを見る</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <polyline points="14,2 14,8 20,8"/>
+                                <line x1="16" y1="13" x2="8" y2="13"/>
+                                <line x1="16" y1="17" x2="8" y2="17"/>
+                                <polyline points="10,9 9,9 8,9"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="demo-screenshot">
+                        <img src="images/demo-screenshot.png" alt="URLを貼って「もじ」とうつだけのデモ画面" class="demo-image">
+                        <div class="demo-caption">
+                            <p>📎 URLを貼って「<strong>もじ</strong>」とうつだけ</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">できること</h2>
+                </div>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-image">
+                            <img src="images/demo-screenshot.png" alt="stand.fm ワンクリック文字起こし" class="feature-img">
+                        </div>
+                        <h3>stand.fm ワンクリック文字起こし</h3>
+                        <p>エピソード URL を貼って <strong>もじ</strong> と送るだけ。</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-image">
+                            <img src="images/fileupload.png" alt="ファイルアップロード対応" class="feature-img">
+                        </div>
+                        <h3>ファイルアップロード対応</h3>
+                        <p>iPhoneのボイスメモなどからファイルアップロード対応。mp3 / wav / m4a ほか主要フォーマットを自動変換。</p>
+                    </div>
+                    <div class="feature-card development">
+                        <div class="feature-image">
+                            <img src="images/voicechat.png" alt="Discord ボイス録音入力" class="feature-img">
+                        </div>
+                        <h3>Discord ボイス録音入力</h3>
+                        <p>ボイスチャットで話した内容もそのままテキスト化（予定）。</p>
+                        <div class="dev-badge">開発中</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">📝</div>
+                        <h3>要約 + SNS 投稿文作成</h3>
+                        <p>要点を 3 行で整理、X (Twitter) 用テンプレも自動生成。<br><strong>プロンプトはいつでも自由に変更可能</strong></p>
+                    </div>
+                    <div class="feature-card development">
+                        <div class="feature-icon">🔗</div>
+                        <h3>Obsidian 連携</h3>
+                        <p>Vault に Markdown 保存 & 類似メモリンク。</p>
+                        <div class="dev-badge">開発中</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="how-it-works" class="how-it-works">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">使い方は 3 ステップ</h2>
+                </div>
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h3><a href="https://discord.com/oauth2/authorize?client_id=1384335146215276637&permissions=101440&integration_type=0&scope=bot" target="_blank" class="step-link">Bot をサーバーに招待</a></h3>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h3>URL を貼る / 音声をアップロード</h3>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h3>文字起こし & 要約を生成</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="manual-link">
+                    <p>詳細手順は <a href="https://mahogany-people-7f2.notion.site/Bot-217b5414fdf880d6be97ceb8e76c3abd?source=copy_link" target="_blank" class="manual-btn">マニュアル</a> をご覧ください。</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="pricing" class="pricing">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">料金プラン</h2>
+                </div>
+                <div class="pricing-grid">
+                    <div class="pricing-card">
+                        <div class="pricing-header">
+                            <h3>FREE</h3>
+                            <div class="price">
+                                <span class="currency">¥</span>
+                                <span class="amount">0</span>
+                            </div>
+                        </div>
+                        <ul class="pricing-features">
+                            <li>1 サーバー / 日 5 回</li>
+                            <li>音声 20 分まで</li>
+                        </ul>
+                        <a href="https://discord.com/oauth2/authorize?client_id=1384335146215276637&permissions=101440&integration_type=0&scope=bot" target="_blank" class="btn btn-outline pricing-btn">無料で導入</a>
+                    </div>
+                    <div class="pricing-card">
+                        <div class="pricing-header">
+                            <h3>PLUS</h3>
+                            <div class="price">
+                                <span class="currency">¥</span>
+                                <span class="amount">490</span>
+                                <span class="period">/月</span>
+                            </div>
+                        </div>
+                        <ul class="pricing-features">
+                            <li>回数無制限</li>
+                            <li>音声 20 分まで</li>
+                            <li>優先キュー & 高速化</li>
+                        </ul>
+                        <a href="https://sub.pessham.com/p/monthlypay" target="_blank" class="btn btn-primary pricing-btn">PLUSを購入</a>
+                    </div>
+                    <div class="pricing-card featured">
+                        <div class="pricing-header">
+                            <h3>PREMIUM</h3>
+                            <div class="price">
+                                <span class="currency">¥</span>
+                                <span class="amount">980</span>
+                                <span class="period">/月</span>
+                            </div>
+                        </div>
+                        <ul class="pricing-features">
+                            <li>回数無制限</li>
+                            <li>音声 60 分まで</li>
+                            <li>優先キュー & 高速化</li>
+                            <li>プレミアムサポート</li>
+                        </ul>
+                        <a href="https://sub.pessham.com/p/monthlypay" target="_blank" class="btn btn-primary pricing-btn">PREMIUMを購入</a>
+                    </div>
+                </div>
+                <div class="pricing-note">
+                    <p>購入・質問は <a href="https://twitter.com/pess_ham" target="_blank" class="contact-link">@pess_ham</a> まで DM</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="faq" class="faq">
+            <div class="container">
+                <div class="section-header">
+                    <h2 class="section-title">よくある質問</h2>
+                </div>
+                <div class="faq-grid">
+                    <div class="faq-item">
+                        <h3 class="faq-question">文字起こしの精度は？</h3>
+                        <p class="faq-answer">OpenAI Whisper を使用しており、日本語でも高精度です。環境音や早口の場合は若干の誤認識が発生します。</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question">どのような音声ファイルに対応していますか？</h3>
+                        <p class="faq-answer">mp3、wav、m4a、mp4、avi、mov など主要なフォーマットに対応しています。stand.fm の URL も直接貼り付けるだけで文字起こしできます。</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question">文字起こしにはどのくらい時間がかかりますか？</h3>
+                        <p class="faq-answer">音声の長さにもよりますが、通常 1-3 分程度で完了します。有料プランでは優先処理により更に高速化されます。</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question">音声データのプライバシーは大丈夫ですか？</h3>
+                        <p class="faq-answer">処理完了後、音声データは自動的に削除されます。文字起こし結果のみが一時的に保存され、外部への共有は一切行いません。</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question">Botが反応しない場合はどうすればいいですか？</h3>
+                        <p class="faq-answer">「もじ」とだけ送信するか、Botにメンションを付けて送信してください。それでも反応しない場合は一度Botを再招待してください。</p>
+                    </div>
+                    <div class="faq-item">
+                        <h3 class="faq-question">無料版と有料版の違いは何ですか？</h3>
+                        <p class="faq-answer">無料版は1日5回まで、音声20分までの制限があります。有料版では回数無制限、PREMIUM プランでは音声60分まで対応し、優先処理で高速化されます。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="logo">📝</div>
+                    <span class="brand-name">音声文字おこし屋さん</span>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-section">
+                        <h4>サービス</h4>
+                        <ul>
+                            <li><a href="#features">できること</a></li>
+                            <li><a href="#pricing">料金プラン</a></li>
+                            <li><a href="#faq">よくある質問</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>サポート</h4>
+                        <ul>
+                            <li><a href="#manual">マニュアル</a></li>
+                            <li><a href="https://twitter.com/pess_ham" target="_blank">お問い合わせ</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 音声文字おこし屋さん. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

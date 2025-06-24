@@ -1,4 +1,4 @@
-# スタエフ文字おこし屋さん Bot 初心者向けマニュアル
+# 音声文字おこし屋さん Bot 初心者向けマニュアル
 
 > このドキュメントでは、**PC に不慣れな初心者**の方でも Discord Bot を自分のサーバーに導入し、音声文字起こし & 要約 Bot を使えるようになるまでを詳しく解説します。難しい単語には補足を付けていますので安心してください。
 
@@ -154,13 +154,22 @@ pip install -r requirements.txt --upgrade
 
 ---
 
-## トラブルシューティング
-| 症状 | 原因と対処 |
-|------|-----------|
-| `IndentationError` など Python のエラーが出て起動しない | 途中でコードを編集してインデントが崩れた可能性があります。最新のリポジトリを取得し直すか、エラー行付近を確認。 |
-| Bot がオフライン表示のまま | `.env` のトークンが間違っている、または `MESSAGE CONTENT INTENT` を有効にしていない。 |
-| 文字起こしが途中で止まる | 音声が 20 分を超えていないか、OpenAI API の利用上限を超えていないか確認。 |
-| `ffmpeg` が見つからないと言われる | PATH が通っていない。`ffmpeg -version` がコマンドプロンプトで動くか確認。 |
+## トラブルシューティング（オーナー／管理者向け）
+
+| 症状 | 主な原因 | チェック & 解決方法 |
+|------|-----------|------------------|
+| Bot が **オフラインのまま** | • `.env` の `DISCORD_TOKEN` が誤り<br>• Bot トークンを再生成した | 1. Developer Portal → Bot → *Token* を再コピー<br>2. `.env` を更新して再起動
+| コマンドや「もじ」に **無反応** | • `MESSAGE CONTENT INTENT` 未許可<br>• 権限 **Read Message History / Send Messages** 不足 | 1. Developer Portal → *Privileged Gateway Intents* を ON<br>2. サーバーのロールで上記権限を付与
+| URL へ 👍 リアクションが付かない | • `Add Reactions` 権限不足<br>• メッセージが Bot の読めないチャンネル | 1. チャンネル権限に *Add Reactions* を追加<br>2. Bot がそのチャンネルを閲覧できるか確認
+| `OpenAIAuthenticationError` や **API 鍵が無効** | `OPENAI_API_KEY` が失効 / 無料枠終了 | 1. OpenAI ダッシュボードで有効なキーを取得<br>2. `.env` 更新→再起動
+| **Quota exceeded / 429 Too Many Requests** | OpenAI 月間/分間上限超過 | 1. Usage ページで残量確認<br>2. 上限引き上げ or 時間を置いて再実行
+| 文字起こしが **途中で停止** する | • 音声が制限時間を超過<br>• ffmpeg 変換でエラー | 1. 20/60 分(プラン)以内か確認<br>2. `logs/bot.log` に ffmpeg 出力エラーが無いか確認
+| `ffmpeg` が見つからない | OS に ffmpeg が未インストール / PATH 未設定 | • Windows: `choco install ffmpeg`<br>• macOS: `brew install ffmpeg`<br>• Linux: apt/yum でインストール後、`ffmpeg -version` が通るか確認
+| `Missing Access` など権限系 Discord エラー | Bot ロール位置が低い / 権限不足 | サーバー設定 → ロール順序で Bot を上位へ移動し必要権限を確認
+| `Cannot connect to host discord.com:443` | サーバー側のネットワーク or プロキシ | サーバーが外部に HTTPS 接続できるか (`curl https://discord.com`) を確認
+| **自動更新がうまくいかない** | git pull で競合発生 | `git reset --hard origin/main` 後に `git pull` し、`pip install -r requirements.txt --upgrade` して再起動
+
+> それでも解決しない場合は `logs/bot.log` を添付して GitHub Issue または Discord サポートサーバーへお問い合わせください。
 
 ---
 

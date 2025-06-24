@@ -1,4 +1,4 @@
-import logging, sys
+import logging, sys, os
 from pathlib import Path
 
 from config import DISCORD_BOT_TOKEN, VAULT_PATH
@@ -7,12 +7,13 @@ import discord
 from discord import File, Interaction
 from discord.ext import commands
 
-from utils.speech import transcribe
+from utils.speech import transcribe, _convert_to_mp3
 from utils.summarize import summarize
 
 
 import re, asyncio, os, tempfile, subprocess, httpx, json
 from pydub import AudioSegment
+import json as _json
 from openai import OpenAI
 from datetime import date
 
@@ -20,6 +21,7 @@ from datetime import date
 STANDFM_RE = re.compile(r'https?://stand\.fm/episodes/[0-9A-Fa-f]+(?:[^\s]*)?')
 # no keyword triggers, use two-step flow
 pending_urls: dict[int, str] = {}  # channel_id -> url
+# Default limit for audio length (seconds) for free servers
 MAX_SECONDS = 20 * 60  # 20 minutes
 openai_client = OpenAI()
 
@@ -27,11 +29,18 @@ openai_client = OpenAI()
 _DAILY_LIMIT = 5
 _LIMIT_MSG = (
     "残念！スタンダードプランでは1日5回までです。"
-    "6回以上使いたい場合は月5$のプレミアムプランに入っていいかオーナーさんにおねだりしてみてね！"
+    "6回以上使いたい場合は月5$のプレミアムプランに入っていいかオーナーさんにおねだりしてみてね！ https://pessham.com/stmoji/"
 )
 
 # guild_id -> (date, count)
 _daily_usage: dict[int, tuple[date, int]] = {}
+
+# --- Premium / paid servers -------------------------------------------------
+# Comma-separated guild IDs via env var e.g. "12345,67890"
+_PREMIUM_GUILD_IDS: set[int] = {int(x) for x in os.getenv("PREMIUM_GUILD_IDS", "").split(",") if x.strip().isdigit()}
+
+def _is_premium(guild_id: int) -> bool:
+    return guild_id in _PREMIUM_GUILD_IDS
 
 # --- Per-guild prompt templates -------------------------------------------
 _PROMPT_FILE = Path("prompts.json")
@@ -60,10 +69,37 @@ def _check_quota(guild_id: int) -> bool:
         _daily_usage[guild_id] = (today, 0)
         stored = _daily_usage[guild_id]
     _, count = stored
+    if _is_premium(guild_id):
+        return True  # unlimited for premium guilds
     if count >= _DAILY_LIMIT:
         return False
     _daily_usage[guild_id] = (today, count + 1)
     return True
+
+def _get_duration_sec(path: str) -> float:
+    """Return audio duration in seconds using ffprobe (avoids loading whole file)."""
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe",
+                "-v",
+                "error",
+                "-select_streams",
+                "a:0",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "json",
+                path,
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        data = _json.loads(result.stdout)
+        return float(data["format"]["duration"])
+    except Exception:
+        return 0.0
 
 async def _yt_download(url: str, dst: str) -> bool:
     """Download audio. Return True on success, False otherwise (e.g. private)."""
@@ -188,15 +224,22 @@ async def on_message(message: discord.Message):
                 await message.reply("僕はメンバーシップなど公開されていない放送の文字おこしは出来ないよ！誰でも聴くことが出来る放送をアップしてね！", mention_author=False)
                 return
 
-            try:
-                dur = AudioSegment.from_file(raw).duration_seconds
-            except Exception:
-                dur = 0
-            if dur > MAX_SECONDS:
-                await message.reply("僕は20分を超える放送の文字おこしは出来ないよ！20分以内の放送をアップしてね！", mention_author=False)
+            dur = _get_duration_sec(raw)
+            limit = 60 * 60 if _is_premium(message.guild.id) else MAX_SECONDS
+            if dur > limit:
+                if _is_premium(message.guild.id):
+                    await message.reply("僕は60分を超える放送の文字おこしは出来ないよ！60分以内の放送をアップしてね！", mention_author=False)
+                else:
+                    await message.reply("僕は20分を超える放送の文字おこしは出来ないよ！20分以内の放送をアップしてね！", mention_author=False)
                 return
 
-            text = await _whisper(raw)
+            # --- Long transcription with heartbeat to avoid idle shutdown ---
+            await message.channel.send("🎧 文字起こし中…（数分かかります）")
+            whisper_task = asyncio.create_task(_whisper(raw))
+            while not whisper_task.done():
+                logging.info("still working…")
+                await asyncio.sleep(10)
+            text = await whisper_task
             summary = await _summarize(text, message.guild.id)
         await message.reply(f"🎧 要約はこちら！\n{summary}", mention_author=False)
         pending_urls.pop(message.channel.id, None)
