@@ -1,5 +1,6 @@
 import logging, sys, os
 from pathlib import Path
+from utils.speech import transcribe as whisper_transcribe
 
 from config import DISCORD_BOT_TOKEN, VAULT_PATH
 
@@ -118,14 +119,8 @@ def _trim(src: str, dst: str):
 
 
 async def _whisper(path: str) -> str:
-    """Run blocking Whisper transcription in a thread so we don't block the event loop."""
-    def _do() -> str:
-        with open(path, "rb") as f:
-            res = openai_client.audio.transcriptions.create(
-                file=f, model="whisper-1", language="ja"
-            )
-            return res.text
-    return await asyncio.to_thread(_do)
+    """Transcribe audio using utils.speech which converts to 24kbps MP3 before upload."""
+    return await asyncio.to_thread(whisper_transcribe, Path(path))
 
 
 async def _summarize(text: str, guild_id: int) -> str:
