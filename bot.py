@@ -49,16 +49,34 @@ DEFAULT_PROMPT = (
     "あなたは気さくなラジオ編集者です。\n"
     "以下を 3 行でざっくり要約し、最後に作者が最も伝えたいであろうメッセージを 1 行で書いてください。\n\n{text}"
 )
-_prompt_map: dict[int, str] = {}
+DEFAULT_FILE_PROMPT = (
+    "次の日本語テキストを読み、100文字程度で内容要約を1つ作成してください。その後、以下のSNS投稿テンプレートに従ってX(Twitter)用投稿文を作成してください。note用出力は不要です。\n"
+    "\n【テンプレート】\n"
+    "1. 読者への問い掛けや断定\n"
+    "2. 重要ポイント箇条書き(2~3行)\n"
+    "3. 筆者の体験談1行\n"
+    "4. 主張を強める or エモい一言\n"
+    "5. 行動を促す呼び掛け\n"
+    "\n制約:\n- フレンドリーで信頼感のある語り口\n- 行動を促す言葉を含める\n- 体験談でリアルさを出す\n- テンポよく140字以内\n"
+    "\n--- 入力テキスト ---\n{text}\n--------------------"
+)
+_prompt_map: dict[int, str] = {}  # スタンドFM URL用プロンプト
+_file_prompt_map: dict[int, str] = {}  # ファイルアップロード用プロンプト
 if _PROMPT_FILE.exists():
     try:
-        _prompt_map.update(json.loads(_PROMPT_FILE.read_text(encoding="utf-8")))
+        data = json.loads(_PROMPT_FILE.read_text(encoding="utf-8"))
+        _prompt_map.update(data.get("standfm", {}))
+        _file_prompt_map.update(data.get("file", {}))
     except Exception as e:
         logging.warning("Failed to load prompts.json: %s", e)
 
 def _save_prompts():
     try:
-        _PROMPT_FILE.write_text(json.dumps(_prompt_map, ensure_ascii=False, indent=2), encoding="utf-8")
+        data = {
+            "standfm": _prompt_map,
+            "file": _file_prompt_map
+        }
+        _PROMPT_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as e:
         logging.warning("Failed to save prompts.json: %s", e)
 
@@ -124,6 +142,7 @@ async def _whisper(path: str) -> str:
 
 
 async def _summarize(text: str, guild_id: int) -> str:
+    """スタンドFM URL用の要約（旧形式）"""
     tmpl = _prompt_map.get(guild_id, DEFAULT_PROMPT)
     prompt = tmpl.format(text=text)
     def _do() -> str:
@@ -132,6 +151,24 @@ async def _summarize(text: str, guild_id: int) -> str:
             messages=[{"role": "user", "content": prompt}],
         )
         return res.choices[0].message.content.strip()
+    return await asyncio.to_thread(_do)
+
+async def _summarize_file(text: str, guild_id: int) -> dict:
+    """ファイルアップロード用の要約（新形式）"""
+    tmpl = _file_prompt_map.get(guild_id, DEFAULT_FILE_PROMPT)
+    prompt = tmpl.format(text=text)
+    def _do() -> dict:
+        response = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.4,
+        )
+        content = response.choices[0].message.content
+        parts = content.split("\n", 1)  # first line summary, rest X tweet
+        return {
+            "summary": parts[0].strip(),
+            "x": parts[1].strip() if len(parts) > 1 else "",
+        }
     return await asyncio.to_thread(_do)
 
 logging.basicConfig(
@@ -169,7 +206,8 @@ async def _process_attachment(channel, attachment, original_author):
     await channel.send("文字起こし中…")
     transcript = transcribe(file_path)
     await channel.send("要約中…")
-    parts = summarize(transcript)
+    # ファイルアップロード用プロンプトを使用
+    parts = await _summarize_file(transcript, channel.guild.id)
     # separate messages
     await channel.send(transcript)
     await channel.send(f"{parts['summary']}\n\n{parts['x']}")
@@ -280,11 +318,25 @@ async def _post(ctx: commands.Context, target: str):
 
 @bot.command(name="setprompt")
 @commands.has_permissions(administrator=True)
-async def _set_prompt(ctx: commands.Context, *, prompt: str):
-    """サーバー専用プロンプトを設定/更新する（管理者専用）"""
-    _prompt_map[ctx.guild.id] = prompt
+async def _set_prompt(ctx: commands.Context, prompt_type: str = "standfm", *, prompt: str):
+    """サーバー専用プロンプトを設定/更新する（管理者専用）
+    
+    使用方法:
+    !setprompt standfm <プロンプト内容>  # スタンドFM URL用プロンプト
+    !setprompt file <プロンプト内容>     # ファイルアップロード用プロンプト
+    """
+    if prompt_type == "standfm":
+        _prompt_map[ctx.guild.id] = prompt
+        prompt_name = "スタンドFM URL用"
+    elif prompt_type == "file":
+        _file_prompt_map[ctx.guild.id] = prompt
+        prompt_name = "ファイルアップロード用"
+    else:
+        await ctx.send("プロンプトタイプは 'standfm' または 'file' を指定してください。")
+        return
+    
     _save_prompts()
-    await ctx.send("このサーバーのプロンプトを更新しました。")
+    await ctx.send(f"このサーバーの{prompt_name}プロンプトを更新しました。")
 
 
 @bot.command(name="manual")
@@ -293,11 +345,51 @@ async def _manual(ctx: commands.Context):
     await ctx.send("使い方マニュアルはこちら:\nhttps://mahogany-people-7f2.notion.site/Bot-217b5414fdf880d6be97ceb8e76c3abd?source=copy_link")
 
 
+@bot.command(name="prompthelp")
+async def _prompt_help(ctx: commands.Context):
+    """プロンプト設定コマンドの使い方を表示"""
+    help_text = """**プロンプト設定コマンド一覧:**
+
+🔧 **プロンプト設定 (管理者専用)**
+`!setprompt standfm <プロンプト内容>` - スタンドFM URL用プロンプトを設定
+`!setprompt file <プロンプト内容>` - ファイルアップロード/Discord音声用プロンプトを設定
+
+📖 **プロンプト確認**
+`!showprompt standfm` - スタンドFM URL用プロンプトを表示
+`!showprompt file` - ファイルアップロード/Discord音声用プロンプトを表示
+
+**使用例:**
+```
+!setprompt file 以下の音声を要約して、重要なポイントを3つ教えてください。{text}
+!showprompt file
+```
+
+**対象機能:**
+- **スタンドFM**: stand.fmのURL → 「もじ」コマンド
+- **ファイル**: m4a/mp3ファイルアップロード、Discord音声メッセージ
+"""
+    await ctx.send(help_text)
+
+
 @bot.command(name="showprompt")
-async def _show_prompt(ctx: commands.Context):
-    """現在のサーバープロンプトを表示"""
-    prompt = _prompt_map.get(ctx.guild.id, DEFAULT_PROMPT)
-    await ctx.send(f"現在のプロンプト:\n```{prompt}```")
+async def _show_prompt(ctx: commands.Context, prompt_type: str = "standfm"):
+    """現在のサーバープロンプトを表示
+    
+    使用方法:
+    !showprompt standfm  # スタンドFM URL用プロンプト表示
+    !showprompt file     # ファイルアップロード用プロンプト表示
+    """
+    if prompt_type == "standfm":
+        prompt = _prompt_map.get(ctx.guild.id, DEFAULT_PROMPT)
+        prompt_name = "スタンドFM URL用"
+    elif prompt_type == "file":
+        prompt = _file_prompt_map.get(ctx.guild.id, DEFAULT_FILE_PROMPT)
+        prompt_name = "ファイルアップロード用"
+    else:
+        await ctx.send("プロンプトタイプは 'standfm' または 'file' を指定してください。")
+        return
+    
+    await ctx.send(f"現在の{prompt_name}プロンプト:\n```{prompt}```")
 
 
 # ---- Global error logging -------------------------------------------------
