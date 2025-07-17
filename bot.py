@@ -120,15 +120,61 @@ def _get_duration_sec(path: str) -> float:
     except Exception:
         return 0.0
 
-async def _yt_download(url: str, dst: str) -> bool:
-    """Download audio. Return True on success, False otherwise (e.g. private)."""
-    proc = await asyncio.create_subprocess_exec(
-        "yt-dlp", "-f", "bestaudio", "-o", dst, url,
-        stdout=asyncio.subprocess.DEVNULL,
-        stderr=asyncio.subprocess.DEVNULL,
-    )
-    await proc.communicate()
-    return proc.returncode == 0
+async def _yt_download(url: str, dst: str) -> tuple[bool, str]:
+    """Download audio. Return (success, error_message)."""
+    try:
+        # 最初の試行：標準的なダウンロード
+        proc = await asyncio.create_subprocess_exec(
+            "yt-dlp", "-f", "bestaudio", "-o", dst, url,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        
+        if proc.returncode == 0:
+            return True, ""
+        
+        # エラー内容を解析
+        error_text = stderr.decode('utf-8', errors='ignore')
+        logging.warning(f"yt-dlp failed for {url}: {error_text}")
+        
+        # 1秒待ってから再試行（一時的な問題の可能性）
+        await asyncio.sleep(1)
+        
+        # 再試行：より多くのフォーマットを試す
+        proc2 = await asyncio.create_subprocess_exec(
+            "yt-dlp", "-f", "best[height<=720]/best", "--no-check-certificate", "-o", dst, url,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout2, stderr2 = await proc2.communicate()
+        
+        if proc2.returncode == 0:
+            logging.info(f"yt-dlp succeeded on retry for {url}")
+            return True, ""
+        
+        # 両方失敗した場合、詳細なエラー情報を返す
+        error_text2 = stderr2.decode('utf-8', errors='ignore')
+        logging.error(f"yt-dlp failed twice for {url}: {error_text2}")
+        
+        # エラータイプを判定
+        combined_error = error_text + " " + error_text2
+        if "private" in combined_error.lower() or "members" in combined_error.lower():
+            return False, "メンバーシップ限定"
+        elif "not available" in combined_error.lower():
+            return False, "配信が見つからない"
+        elif "region" in combined_error.lower():
+            return False, "地域制限"
+        elif "403" in combined_error or "forbidden" in combined_error.lower():
+            return False, "アクセス拒否"
+        elif "network" in combined_error.lower() or "connection" in combined_error.lower():
+            return False, "ネットワークエラー"
+        else:
+            return False, f"未知のエラー: {error_text[:100]}"
+    
+    except Exception as e:
+        logging.exception(f"Exception in _yt_download: {e}")
+        return False, f"システムエラー: {str(e)}"
 
 
 def _trim(src: str, dst: str):
@@ -252,9 +298,21 @@ async def on_message(message: discord.Message):
         await message.channel.typing()
         with tempfile.TemporaryDirectory() as td:
             raw = os.path.join(td, "raw.m4a")
-            success = await _yt_download(url, raw)
+            success, error_msg = await _yt_download(url, raw)
             if not success:
-                await message.reply("僕はメンバーシップなど公開されていない放送の文字おこしは出来ないよ！誰でも聴くことが出来る放送をアップしてね！", mention_author=False)
+                # エラータイプに応じたメッセージ
+                if error_msg == "メンバーシップ限定":
+                    await message.reply("僕はメンバーシップなど公開されていない放送の文字おこしは出来ないよ！誰でも聴くことが出来る放送をアップしてね！", mention_author=False)
+                elif error_msg == "配信が見つからない":
+                    await message.reply("このスタンドFM URLの配信が見つからないよ！URLが正しいか確認してね！", mention_author=False)
+                elif error_msg == "地域制限":
+                    await message.reply("この配信は地域制限がかかっているみたい！日本国内からアクセス可能な配信をアップしてね！", mention_author=False)
+                elif error_msg == "アクセス拒否":
+                    await message.reply("スタンドFMからのアクセスが拒否されました。しばらく時間を置いてから再試行してね！", mention_author=False)
+                elif error_msg == "ネットワークエラー":
+                    await message.reply("ネットワークエラーが発生しました。しばらく時間を置いてから再試行してね！", mention_author=False)
+                else:
+                    await message.reply(f"音声のダウンロードに失敗しました。エラー詳細: {error_msg}\n\nしばらく時間を置いてから再試行するか、別の配信URLを試してね！", mention_author=False)
                 return
 
             dur = _get_duration_sec(raw)
