@@ -249,8 +249,19 @@ async def _process_attachment(channel, attachment, original_author):
     tmp = Path("temp"); tmp.mkdir(exist_ok=True)
     file_path = tmp / attachment.filename
     await attachment.save(file_path)
+
+    # 音声の長さをチェックする
+    dur = _get_duration_sec(str(file_path))
+    limit = 60 * 60 if _is_premium(channel.guild.id) else MAX_SECONDS
+    if dur > limit:
+        if _is_premium(channel.guild.id):
+            await channel.send("僕は60分を超える放送の文字おこしは出来ないよ！60分以内の放送をアップしてね！")
+        else:
+            await channel.send("僕は20分を超える放送の文字おこしは出来ないよ！20分以内の放送をアップしてね！")
+        return True # 処理済みとしてTrueを返す
+
     await channel.send("文字起こし中…")
-    transcript = transcribe(file_path)
+    transcript = await asyncio.to_thread(transcribe, file_path)
     await channel.send("要約中…")
     # ファイルアップロード用プロンプトを使用
     parts = await _summarize_file(transcript, channel.guild.id)
