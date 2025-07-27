@@ -350,6 +350,12 @@ async def on_message(message: discord.Message):
                 logging.exception("Whisper failed: %s", e)
                 await message.reply("Whisper API でエラーが発生しました。", mention_author=False)
                 return
+
+            # 文字起こし結果が空でないかチェック
+            if not text or not text.strip():
+                await message.reply("文字起こしに失敗したか、音声に内容が含まれていなかったようです。", mention_author=False)
+                return
+
             try:
                 summary = await _summarize(text, message.guild.id)
                 logging.info("summary done, %d chars", len(summary))
