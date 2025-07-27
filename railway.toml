@@ -1,3 +1,6 @@
 [deploy]
 startCommand = "python bot.py"
 serviceType  = "worker"
+
+[build]
+dockerfile = "Dockerfile"
